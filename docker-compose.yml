@@ -1,0 +1,26 @@
+services:
+  ai-service:
+    build: ./ai-models
+    ports: ["8001:8001"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./app/backend
+    ports: ["8000:8000"]
+    environment:
+      - AI_SERVICE_URL=${AI_SERVICE_URL}   # doc tu .env: ten service khi chay local, hoac link public/tunnel
+      - MONGODB_URI=${MONGODB_URI}
+    depends_on:
+      ai-service:
+        condition: service_healthy
+
+  frontend:
+    build: ./app/frontend
+    ports: ["3000:80"]
+    environment:
+      - API_URL=${API_URL}                 # doc tu .env: doi theo dia chi public/tunnel hien tai
+    depends_on: [backend]
