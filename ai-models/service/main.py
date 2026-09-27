@@ -3,6 +3,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, root_validator
 
@@ -91,7 +92,18 @@ def predict(model_name: str, data: PatientData):
             detail='Model không tồn tại. Chọn: logistic, svm, naive_bayes, random_forest',
         )
 
-    input_data = np.array([[
+    feature_columns = [
+        'Pregnancies',
+        'Glucose',
+        'BloodPressure',
+        'SkinThickness',
+        'Insulin',
+        'BMI',
+        'DiabetesPedigreeFunction',
+        'Age',
+    ]
+
+    input_df = pd.DataFrame([[
         data.Pregnancies,
         data.Glucose,
         data.BloodPressure,
@@ -100,13 +112,13 @@ def predict(model_name: str, data: PatientData):
         data.BMI,
         data.DiabetesPedigreeFunction,
         data.Age,
-    ]], dtype=float)
+    ]], columns=feature_columns, dtype=float)
 
     model = models[model_key]
     if model_key in ['logistic', 'svm']:
-        input_processed = scaler.transform(input_data)
+        input_processed = scaler.transform(input_df)
     else:
-        input_processed = input_data
+        input_processed = input_df
 
     prediction = int(model.predict(input_processed)[0])
     probability = float(model.predict_proba(input_processed)[0][1]) if hasattr(model, 'predict_proba') else 0.0

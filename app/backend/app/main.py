@@ -12,12 +12,11 @@ from fastapi.responses import RedirectResponse, Response
 from pymongo import MongoClient
 from pydantic import BaseModel
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
-from dotenv import load_dotenv
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(PROJECT_ROOT / ".env")
 load_dotenv()
 
 app = FastAPI(title="Web Backend API", version="1.0.0")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -64,19 +63,26 @@ MODEL_LABELS = {
 }
 
 MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "diabetes_db")
+mongo_status = "not_configured"
 
 
 def init_mongo_client():
+    global mongo_status
+
     if not MONGODB_URI:
+        mongo_status = "not_configured"
         print("MongoDB URI không được cấu hình. Lịch sử dự đoán sẽ không được lưu.")
         return None
 
     try:
         client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=2000)
         client.admin.command("ping")
+        mongo_status = "connected"
         print("MongoDB kết nối thành công. Lịch sử dự đoán sẽ được lưu.")
         return client
     except Exception as exc:
+        mongo_status = "unavailable"
         print(f"MongoDB không khả dụng, bỏ qua lưu lịch sử: {exc}")
         return None
 
@@ -103,7 +109,19 @@ class PatientInput(BaseModel):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "ai_service_url": AI_SERVICE_URL}
+    if mongo_client is not None:
+        try:
+            mongo_client.admin.command("ping")
+            mongo_status = "connected"
+        except Exception:
+            mongo_status = "unavailable"
+
+    return {
+        "status": "ok",
+        "ai_service_url": AI_SERVICE_URL,
+        "mongodb": mongo_status,
+        "mongodb_database": MONGODB_DATABASE,
+    }
 
 
 @app.post("/api/v1/predict-disease")
@@ -157,7 +175,7 @@ def proxy_to_ai_service(data: PatientInput):
         }
 
         if mongo_client is not None:
-            database = mongo_client.get_default_database()
+            database = mongo_client[MONGODB_DATABASE]
             prediction_history = database["prediction_history"]
             prediction_history.insert_one({
                 "request_id": response_payload["id"],
