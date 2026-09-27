@@ -12,15 +12,17 @@ services:
     build: ./app/backend
     ports: ["8000:8000"]
     environment:
-      - AI_SERVICE_URL=${AI_SERVICE_URL}   # doc tu .env: ten service khi chay local, hoac link public/tunnel
+      - AI_SERVICE_URL=${AI_SERVICE_URL}
+      - API_URL=${API_URL}
       - MONGODB_URI=${MONGODB_URI}
     depends_on:
       ai-service:
         condition: service_healthy
 
   frontend:
-    build: ./app/frontend
+    build:
+      context: ./app/frontend
+      args:
+        VITE_API_URL: ${API_URL}
     ports: ["3000:80"]
-    environment:
-      - API_URL=${API_URL}                 # doc tu .env: doi theo dia chi public/tunnel hien tai
     depends_on: [backend]

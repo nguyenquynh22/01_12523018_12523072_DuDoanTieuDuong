@@ -2,10 +2,10 @@
 
 ## 1. Thành viên
 
-| Họ và tên | MSSV | Phần việc đảm nhận |
-| :--- | :---: | :--- |
-| **Phan Tùng Dương** | 12523018 | Xây dựng Backend, cấu trúc Docker, huấn luyện model Logistic Regression & Naive Bayes |
-| **Nguyễn Thị Như Quỳnh** | 12523072 | Xây dựng Khung dự án, phân tích EDA (≥5 hình), huấn luyện model SVM & Random Forest |
+| Họ và tên                |   MSSV   | Phần việc đảm nhận                                                                    |
+| :----------------------- | :------: | :------------------------------------------------------------------------------------ |
+| **Phan Tùng Dương**      | 12523018 | Xây dựng Backend, cấu trúc Docker, huấn luyện model Logistic Regression & Naive Bayes |
+| **Nguyễn Thị Như Quỳnh** | 12523072 | Xây dựng Khung dự án, phân tích EDA (≥5 hình), huấn luyện model SVM & Random Forest   |
 
 ---
 
