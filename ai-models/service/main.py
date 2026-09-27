@@ -14,9 +14,7 @@ try:
     scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.joblib"))
     models = {
         "logistic": joblib.load(os.path.join(MODEL_DIR, "logistic_regression_model.joblib")),
-        "svm": joblib.load(os.path.join(MODEL_DIR, "svm_model.joblib")),
         "naive_bayes": joblib.load(os.path.join(MODEL_DIR, "naive_bayes_model.joblib")),
-        "random_forest": joblib.load(os.path.join(MODEL_DIR, "random_forest_model.joblib")),
     }
 except Exception as e:
     print(f"Lỗi load model: {e}")
@@ -38,23 +36,23 @@ def health_check():
 @app.post("/predict/{model_name}")
 def predict(model_name: str, data: PatientData):
     if model_name not in models:
-        raise HTTPException(status_code=400, detail="Model không tồn tại. Chọn: logistic, svm, naive_bayes, random_forest")
-    
+        raise HTTPException(status_code=400, detail="Model không tồn tại. Chọn: logistic, naive_bayes")
+
     # Chuyển dữ liệu đầu vào thành mảng numpy
     input_data = np.array([[
-        data.Pregnancies, data.Glucose, data.BloodPressure, 
-        data.SkinThickness, data.Insulin, data.BMI, 
+        data.Pregnancies, data.Glucose, data.BloodPressure,
+        data.SkinThickness, data.Insulin, data.BMI,
         data.DiabetesPedigreeFunction, data.Age
     ]])
-    
+
     model = models[model_name]
-    
-    # Logistic và SVM cần scale dữ liệu, Naive Bayes và Random Forest thì không
-    if model_name in ["logistic", "svm"]:
+
+    # Chỉ Logistic Regression cần scale dữ liệu; Naive Bayes dùng dữ liệu gốc
+    if model_name == "logistic":
         input_processed = scaler.transform(input_data)
     else:
         input_processed = input_data
-        
+
     prediction = int(model.predict(input_processed)[0])
     
     # Lấy xác suất nếu model hỗ trợ
