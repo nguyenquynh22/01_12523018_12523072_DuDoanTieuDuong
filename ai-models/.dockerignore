@@ -1,0 +1,13 @@
+# Ignore local development and large folders not needed in image
+colab/
+data/
+src/
+*.ipynb
+*.log
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.vscode/

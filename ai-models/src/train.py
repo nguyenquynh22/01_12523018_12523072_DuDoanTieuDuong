@@ -1,65 +1,84 @@
-import pandas as pd
-import numpy as np
+import zipfile
+from pathlib import Path
+
 import joblib
-import os
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import GaussianNB
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+
 from preprocess import clean_and_preprocess
 
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = ROOT_DIR / 'data'
+MODEL_DIR = ROOT_DIR / 'models'
+
+
+def resolve_data_file():
+    csv_path = DATA_DIR / 'diabetes.csv'
+    if csv_path.exists():
+        return csv_path
+
+    for archive_name in ('archive.zip',):
+        archive_path = DATA_DIR / archive_name
+        if archive_path.exists():
+            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                zip_ref.extractall(DATA_DIR)
+            csv_path = next(DATA_DIR.glob('*.csv'), None)
+            if csv_path is not None:
+                return csv_path
+
+    raise FileNotFoundError(
+        f"Không tìm thấy file dữ liệu. Kiểm tra {DATA_DIR} và đảm bảo có file diabetes.csv hoặc archive.zip."
+    )
+
+
+def build_pipeline(model_name: str, estimator):
+    return Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', estimator),
+    ])
+
+
 def main():
-    # Đọc dataset (giả định file CSV nằm trong thư mục data)
-    data_path = "../data/diabetes.csv" # Hoặc đường dẫn tới file giải nén của bạn
-    if not os.path.exists(data_path):
-        print(f"Không tìm thấy file dữ liệu tại {data_path}. Vui lòng kiểm tra lại!")
-        return
+    data_path = resolve_data_file()
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(data_path)
     df = clean_and_preprocess(df)
 
-    # Chia Features và Target
-    X = df.drop(columns=['Outcome', 'index'] if 'index' in df.columns else ['Outcome'])
+    feature_columns = [col for col in df.columns if col != 'Outcome' and col != 'index']
+    X = df[feature_columns]
     y = df['Outcome']
 
-    # Chia tập Train / Test
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-    # Chuẩn hóa dữ liệu cho Logistic Regression & SVM
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
+    print('Đang huấn luyện các mô hình...')
 
-    # Đảm bảo thư mục models tồn tại
-    os.makedirs("../models", exist_ok=True)
+    models = {
+        'logistic': build_pipeline('logistic', LogisticRegression(random_state=42, max_iter=1000)),
+        'svm': build_pipeline('svm', SVC(probability=True, random_state=42)),
+        'naive_bayes': Pipeline([('scaler', StandardScaler()), ('classifier', GaussianNB())]),
+        'random_forest': Pipeline([('scaler', StandardScaler()), ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))]),
+    }
 
-    print("Đang huấn luyện các mô hình...")
-    
-    # 1. Logistic Regression
-    lr = LogisticRegression(random_state=42)
-    lr.fit(X_train_scaled, y_train)
-    joblib.dump(lr, '../models/logistic_regression_model.joblib')
+    for name, model in models.items():
+        if name in {'logistic', 'svm'}:
+            model.fit(X_train, y_train)
+        else:
+            model.fit(X_train, y_train)
 
-    # 2. SVM
-    svm = SVC(probability=True, random_state=42)
-    svm.fit(X_train_scaled, y_train)
-    joblib.dump(svm, '../models/svm_model.joblib')
+    joblib.dump(models, MODEL_DIR / 'model.joblib', compress=3)
 
-    # 3. Naive Bayes
-    nb = GaussianNB()
-    nb.fit(X_train, y_train)
-    joblib.dump(nb, '../models/naive_bayes_model.joblib')
+    print(f'Huấn luyện thành công! Đã lưu bundle model.joblib vào {MODEL_DIR}')
 
-    # 4. Random Forest
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
-    joblib.dump(rf, '../models/random_forest_model.joblib')
 
-    # Lưu Scaler
-    joblib.dump(scaler, '../models/scaler.joblib')
-
-    print("Huấn luyện thành công! Đã lưu toàn bộ file vào thư mục ai-models/models/")
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -27,7 +27,7 @@ export const ResultComparison: React.FC<ResultComparisonProps> = ({ data }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {data.results.map((res, index) => {
           const isRisky = res.prediction === 1;
-          const isBest = res.modelName.includes("Random Forest");
+          const isBest = res.modelName === data.bestModel;
 
           return (
             <div 

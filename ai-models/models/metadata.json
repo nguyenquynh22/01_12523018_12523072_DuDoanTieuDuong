@@ -1,0 +1,50 @@
+{
+  "project_name": "Diabetes Prediction",
+  "model_family": "binary_classification",
+  "selected_model": "Random Forest",
+  "model_version": "1.0.0",
+  "training_date": "2026-09-27",
+  "target": "Outcome",
+  "target_labels": {
+    "0": "No diabetes",
+    "1": "Diabetes"
+  },
+  "feature_columns": [
+    "Pregnancies",
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI",
+    "DiabetesPedigreeFunction",
+    "Age"
+  ],
+  "framework": "scikit-learn",
+  "metrics": {
+    "logistic_regression": {
+      "accuracy": 0.77,
+      "precision": 0.72,
+      "recall": 0.58,
+      "f1_score": 0.64
+    },
+    "naive_bayes": {
+      "accuracy": 0.75,
+      "precision": 0.68,
+      "recall": 0.6,
+      "f1_score": 0.64
+    },
+    "svm": {
+      "accuracy": 0.78,
+      "precision": 0.74,
+      "recall": 0.61,
+      "f1_score": 0.67
+    },
+    "random_forest": {
+      "accuracy": 0.81,
+      "precision": 0.78,
+      "recall": 0.68,
+      "f1_score": 0.72
+    }
+  },
+  "notes": "Random Forest was selected because it achieved the highest accuracy and F1 score among the evaluated models."
+}

@@ -1,15 +1,22 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 
 def clean_and_preprocess(df):
     """
-    Hàm làm sạch dữ liệu: Thay thế giá trị 0 bằng NaN ở các cột y tế 
-    và điền giá trị thiếu bằng Median để tránh ảnh hưởng outlier.
+    Làm sạch dữ liệu: thay các giá trị 0 không hợp lệ bằng NaN ở các cột y tế
+    và điền bằng median để giảm ảnh hưởng outlier.
     """
+    df = df.copy()
     cols_to_fix = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
-    df[cols_to_fix] = df[cols_to_fix].replace(0, np.nan)
-    
+
     for col in cols_to_fix:
-        df[col] = df[col].fillna(df[col].median())
-        
+        if col not in df.columns:
+            continue
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+        df[col] = df[col].replace(0, np.nan)
+        median_value = df[col].median()
+        if pd.notna(median_value):
+            df[col] = df[col].fillna(median_value)
+
     return df
