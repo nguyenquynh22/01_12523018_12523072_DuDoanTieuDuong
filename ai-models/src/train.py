@@ -7,6 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 
@@ -23,17 +24,25 @@ def resolve_data_file():
     if csv_path.exists():
         return csv_path
 
-    archive_path = DATA_DIR / 'archive.zip'
-    if archive_path.exists():
-        with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-            zip_ref.extractall(DATA_DIR)
-        csv_path = next(DATA_DIR.glob('*.csv'), None)
-        if csv_path is not None:
-            return csv_path
+    for archive_name in ('archive.zip',):
+        archive_path = DATA_DIR / archive_name
+        if archive_path.exists():
+            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                zip_ref.extractall(DATA_DIR)
+            csv_path = next(DATA_DIR.glob('*.csv'), None)
+            if csv_path is not None:
+                return csv_path
 
     raise FileNotFoundError(
         f"Không tìm thấy file dữ liệu. Kiểm tra {DATA_DIR} và đảm bảo có file diabetes.csv hoặc archive.zip."
     )
+
+
+def build_pipeline(model_name: str, estimator):
+    return Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', estimator),
+    ])
 
 
 def main():
@@ -51,30 +60,24 @@ def main():
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-
     print('Đang huấn luyện các mô hình...')
 
-    lr = LogisticRegression(random_state=42, max_iter=1000)
-    lr.fit(X_train_scaled, y_train)
-    joblib.dump(lr, MODEL_DIR / 'logistic_regression_model.joblib')
+    models = {
+        'logistic': build_pipeline('logistic', LogisticRegression(random_state=42, max_iter=1000)),
+        'svm': build_pipeline('svm', SVC(probability=True, random_state=42)),
+        'naive_bayes': Pipeline([('scaler', StandardScaler()), ('classifier', GaussianNB())]),
+        'random_forest': Pipeline([('scaler', StandardScaler()), ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))]),
+    }
 
-    svm = SVC(probability=True, random_state=42)
-    svm.fit(X_train_scaled, y_train)
-    joblib.dump(svm, MODEL_DIR / 'svm_model.joblib')
+    for name, model in models.items():
+        if name in {'logistic', 'svm'}:
+            model.fit(X_train, y_train)
+        else:
+            model.fit(X_train, y_train)
 
-    nb = GaussianNB()
-    nb.fit(X_train, y_train)
-    joblib.dump(nb, MODEL_DIR / 'naive_bayes_model.joblib')
+    joblib.dump(models, MODEL_DIR / 'model.joblib', compress=3)
 
-    rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X_train, y_train)
-    joblib.dump(rf, MODEL_DIR / 'random_forest_model.joblib')
-
-    joblib.dump(scaler, MODEL_DIR / 'scaler.joblib')
-
-    print(f'Huấn luyện thành công! Đã lưu toàn bộ file vào {MODEL_DIR}')
+    print(f'Huấn luyện thành công! Đã lưu bundle model.joblib vào {MODEL_DIR}')
 
 
 if __name__ == '__main__':

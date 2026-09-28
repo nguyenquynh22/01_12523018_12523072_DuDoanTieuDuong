@@ -12,8 +12,14 @@ from fastapi.responses import RedirectResponse, Response
 from pymongo import MongoClient
 from pydantic import BaseModel
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(PROJECT_ROOT / ".env")
+BASE_DIR = Path(__file__).resolve().parent
+try:
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
+    load_dotenv(PROJECT_ROOT / ".env")
+except IndexError:
+    # Trường hợp chạy trong Docker hoặc cấu trúc nông hơn
+    load_dotenv(BASE_DIR / ".env")
+
 load_dotenv()
 
 app = FastAPI(title="Web Backend API", version="1.0.0")
@@ -40,16 +46,7 @@ async def normalize_trailing_dots(request: Request, call_next):
 
 
 def resolve_ai_service_url():
-    url = os.getenv("AI_SERVICE_URL", "http://localhost:8001").rstrip("/")
-    parsed = urlparse(url)
-    host = parsed.hostname
-
-    if host and host not in {"localhost", "127.0.0.1"}:
-        try:
-            socket.getaddrinfo(host, parsed.port or 80)
-        except socket.gaierror:
-            return url.replace(host, "localhost", 1)
-
+    url = os.getenv("AI_SERVICE_URL", "http://ai-service:8001").rstrip("/")
     return url
 
 

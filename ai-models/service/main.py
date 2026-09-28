@@ -2,14 +2,15 @@ import os
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, field_validator
 
 app = FastAPI(title='AI Service - Diabetes Prediction', version='1.0')
 
 MODEL_DIR = Path(__file__).resolve().parents[1] / 'models'
+MODEL_BUNDLE_PATH = MODEL_DIR / 'model.joblib'
+MODEL_KEYS = ['logistic', 'svm', 'naive_bayes', 'random_forest']
 
 
 def normalize_model_name(model_name: str) -> str:
@@ -27,14 +28,44 @@ def normalize_model_name(model_name: str) -> str:
     return aliases.get(normalized, normalized)
 
 
+def load_models():
+    loaded_models = {}
+    scaler = None
+
+    if not MODEL_BUNDLE_PATH.exists():
+        return scaler, loaded_models
+
+    try:
+        bundle = joblib.load(MODEL_BUNDLE_PATH)
+    except Exception as exc:
+        print(f'Không thể load model bundle: {exc}')
+        return scaler, loaded_models
+
+    if isinstance(bundle, dict):
+        for key in MODEL_KEYS:
+            if key in bundle and bundle[key] is not None:
+                loaded_models[key] = bundle[key]
+        if loaded_models:
+            for model in loaded_models.values():
+                if hasattr(model, 'named_steps') and 'scaler' in model.named_steps:
+                    scaler = model.named_steps['scaler']
+                    break
+        return scaler, loaded_models
+
+    if hasattr(bundle, 'named_steps'):
+        scaler = bundle.named_steps.get('scaler', scaler)
+        if 'random_forest' in MODEL_KEYS:
+            loaded_models['random_forest'] = bundle
+
+    return scaler, loaded_models
+
+
 try:
-    scaler = joblib.load(MODEL_DIR / 'scaler.joblib')
-    models = {
-        'logistic': joblib.load(MODEL_DIR / 'logistic_regression_model.joblib'),
-        'svm': joblib.load(MODEL_DIR / 'svm_model.joblib'),
-        'naive_bayes': joblib.load(MODEL_DIR / 'naive_bayes_model.joblib'),
-        'random_forest': joblib.load(MODEL_DIR / 'random_forest_model.joblib'),
-    }
+    scaler, models = load_models()
+    if models:
+        print(f'Đã load {len(models)} model(s) từ {MODEL_DIR}')
+    else:
+        print('Không tìm thấy model nào. Kiểm tra ai-models/models/.')
 except Exception as e:
     print(f'Lỗi load model: {e}')
     scaler = None
@@ -51,28 +82,12 @@ class PatientData(BaseModel):
     DiabetesPedigreeFunction: float = 0.0
     Age: float = 0.0
 
-    @root_validator(pre=True)
-    def normalize_input_keys(cls, values):
-        if not isinstance(values, dict):
-            return values
-
-        normalized = {}
-        field_map = {
-            'pregnancies': 'Pregnancies',
-            'glucose': 'Glucose',
-            'bloodpressure': 'BloodPressure',
-            'skinthickness': 'SkinThickness',
-            'insulin': 'Insulin',
-            'bmi': 'BMI',
-            'diabetespedigreefunction': 'DiabetesPedigreeFunction',
-            'age': 'Age',
-        }
-
-        for key, value in values.items():
-            mapped_key = field_map.get(str(key).lower(), key)
-            normalized[mapped_key] = value
-
-        return normalized
+    @field_validator('*', mode='before')
+    @classmethod
+    def coerce_float(cls, value):
+        if value is None:
+            return 0.0
+        return float(value)
 
 
 @app.get('/health')
@@ -115,13 +130,18 @@ def predict(model_name: str, data: PatientData):
     ]], columns=feature_columns, dtype=float)
 
     model = models[model_key]
-    if model_key in ['logistic', 'svm']:
-        input_processed = scaler.transform(input_df)
+    if hasattr(model, 'named_steps'):
+        pipeline_model = model
+        prediction = int(pipeline_model.predict(input_df)[0])
+        probability = float(pipeline_model.predict_proba(input_df)[0][1]) if hasattr(pipeline_model, 'predict_proba') else 0.0
     else:
-        input_processed = input_df
+        if model_key in ['logistic', 'svm']:
+            input_processed = scaler.transform(input_df)
+        else:
+            input_processed = input_df
 
-    prediction = int(model.predict(input_processed)[0])
-    probability = float(model.predict_proba(input_processed)[0][1]) if hasattr(model, 'predict_proba') else 0.0
+        prediction = int(model.predict(input_processed)[0])
+        probability = float(model.predict_proba(input_processed)[0][1]) if hasattr(model, 'predict_proba') else 0.0
 
     return {
         'model_used': model_key,
