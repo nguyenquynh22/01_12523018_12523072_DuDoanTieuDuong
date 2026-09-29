@@ -43,7 +43,7 @@ export default function App() {
           ) : (
             <div className="empty-state">
               <p>
-                Hãy nhập dữ liệu và nhấn <strong>Chạy Dự Đoán 4 Model</strong>
+                Hãy nhập dữ liệu và nhấn <strong>Chạy Dự Đoán</strong>
               </p>
               <span>Kết quả so sánh 4 mô hình sẽ xuất hiện ở đây.</span>
             </div>
