@@ -77,11 +77,8 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white text-sm">
             {history.map((item) => {
-              const bestResult =
-                item.results.find((r) =>
-                  r.modelName.includes("Random Forest"),
-                ) || item.results[0];
-              const isRisky = bestResult.prediction === 1;
+              const result = item.results.find((entry) => entry.modelName === item.recommendedModel) || item.results[0];
+              const isRisky = result.prediction === 1;
 
               return (
                 <tr key={item.id} className="transition hover:bg-slate-50">
@@ -108,7 +105,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                   </td>
                   <td className="px-4 py-4 align-top">
                     <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                      {item.bestModel}
+                      {item.recommendedModel}
                     </span>
                   </td>
                   <td className="px-4 py-4 align-top">
@@ -124,7 +121,7 @@ export const HistoryTable: React.FC<HistoryTableProps> = ({
                       ) : (
                         <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                       )}
-                      {bestResult.statusText} ({bestResult.probability}%)
+                      {result.statusText} ({result.probability}%)
                     </span>
                   </td>
                   <td className="px-4 py-4 text-right align-top">

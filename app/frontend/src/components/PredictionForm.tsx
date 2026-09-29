@@ -146,12 +146,12 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
             {isLoading ? (
               <div className="flex items-center gap-2">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
-                <span>Đang chạy đồng thời 4 mô hình AI...</span>
+                <span>Đang dự đoán...</span>
               </div>
             ) : (
               <>
                 <Send className="mr-2 h-4 w-4" />
-                Chạy Dự Đoán 4 Model
+                Dự đoán
               </>
             )}
           </button>

@@ -1,4 +1,6 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
+import logging
 import socket
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +25,7 @@ except IndexError:
 load_dotenv()
 
 app = FastAPI(title="Web Backend API", version="1.0.0")
+logger = logging.getLogger(__name__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,7 +54,6 @@ def resolve_ai_service_url():
 
 
 AI_SERVICE_URL = resolve_ai_service_url()
-MODEL_NAMES = ["logistic", "svm", "naive_bayes", "random_forest"]
 MODEL_LABELS = {
     "logistic": "Logistic Regression",
     "svm": "Support Vector Machine (SVM)",
@@ -124,72 +126,66 @@ def health_check():
 @app.post("/api/v1/predict-disease")
 def proxy_to_ai_service(data: PatientInput):
     payload = data.model_dump()
-    results = []
-
     try:
-        for model_name in MODEL_NAMES:
-            response = requests.post(
-                f"{AI_SERVICE_URL}/predict/{model_name}",
-                json=payload,
-                timeout=20,
-            )
+        config_response = requests.get(f"{AI_SERVICE_URL}/model-config", timeout=10)
+        if config_response.status_code != 200:
+            raise HTTPException(status_code=config_response.status_code, detail=config_response.text)
+        config = config_response.json()
+        model_keys = config.get("model_keys", list(MODEL_LABELS))
+        if set(model_keys) != set(MODEL_LABELS):
+            raise HTTPException(status_code=502, detail="AI Service config must include all four models")
 
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            responses = list(executor.map(
+                lambda model_key: requests.post(
+                    f"{AI_SERVICE_URL}/predict/{model_key}", json=payload, timeout=20
+                ),
+                model_keys,
+            ))
+
+        results = []
+        for model_key, response in zip(model_keys, responses):
             if response.status_code != 200:
-                raise HTTPException(
-                    status_code=response.status_code,
-                    detail=f"AI Service từ chối xử lý model {model_name}",
-                )
-
-            result = response.json()
-            probability = float(result.get("probability", 0.0)) * 100
-            prediction = int(result.get("prediction", 0))
-
+                logger.error("AI service returned %s for model %s: %s", response.status_code, model_key, response.text)
+                raise HTTPException(status_code=502, detail=f"AI Service prediction failed for {model_key} (HTTP {response.status_code})")
+            prediction_result = response.json()
+            prediction = int(prediction_result["prediction"])
+            metrics = config["models"][model_key]
+            threshold = float(metrics["threshold"])
             results.append({
-                "modelName": MODEL_LABELS[model_name],
+                "modelName": MODEL_LABELS[model_key],
                 "prediction": prediction,
-                "probability": round(probability, 1),
+                "probability": round(float(prediction_result["probability"]) * 100, 1),
+                "threshold": round(threshold * 100, 1),
                 "statusText": "Nguy cơ tiểu đường" if prediction == 1 else "Bình thường",
-                "description": "Mô hình AI được đánh giá theo chỉ số sức khỏe bệnh nhân.",
+                "description": "Dự đoán với ngưỡng cố định 0.5.",
+                "cvMetrics": metrics["cv_metrics"],
+                "testMetrics": metrics["test_metrics"],
             })
 
-        best_model = max(results, key=lambda item: item["probability"])
+        recommended_model = config["model_name"]
         now_utc = datetime.now(timezone.utc)
         response_payload = {
             "id": f"pred-{now_utc.strftime('%Y%m%d%H%M%S')}",
             "createdAt": now_utc.strftime("%d/%m/%Y %H:%M:%S"),
-            "inputData": {
-                "pregnancies": payload["pregnancies"],
-                "glucose": payload["glucose"],
-                "bloodPressure": payload["bloodPressure"],
-                "skinThickness": payload["skinThickness"],
-                "insulin": payload["insulin"],
-                "bmi": payload["bmi"],
-                "diabetesPedigreeFunction": payload["diabetesPedigreeFunction"],
-                "age": payload["age"],
-            },
+            "inputData": payload,
             "results": results,
-            "bestModel": best_model["modelName"],
+            "recommendedModel": recommended_model,
+            "targetSensitivity": config["target_sensitivity"],
+            "cvSampleCount": config["cv_sample_count"],
+            "testSampleCount": config["test_sample_count"],
         }
-
         if mongo_client is not None:
             database = mongo_client[MONGODB_DATABASE]
-            prediction_history = database["prediction_history"]
-            prediction_history.insert_one({
-                "request_id": response_payload["id"],
-                "created_at": now_utc,
-                "input_data": response_payload["inputData"],
-                "results": response_payload["results"],
-                "best_model": response_payload["bestModel"],
+            database["prediction_history"].insert_one({
+                "request_id": response_payload["id"], "created_at": now_utc,
+                "input_data": payload, "results": results,
+                "recommended_model": recommended_model, "threshold": 0.5,
             })
-
         return response_payload
-
     except requests.exceptions.RequestException as exc:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Không thể kết nối đến AI-Service tại {AI_SERVICE_URL}. Chi tiết: {str(exc)}",
-        )
+        raise HTTPException(status_code=503, detail=f"Cannot connect to AI service at {AI_SERVICE_URL}: {exc}")
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Lỗi xử lý dự đoán: {str(exc)}")
+        raise HTTPException(status_code=500, detail=f"Prediction processing failed: {exc}")
