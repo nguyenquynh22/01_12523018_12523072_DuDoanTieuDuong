@@ -63,15 +63,16 @@ Toàn bộ hệ thống gồm các container độc lập kết nối qua mạng
 
 ### Bảng so sánh kết quả thực nghiệm trên tập Test
 
-| Metric | Logistic Regression | Gaussian Naive Bayes | Support Vector Machine | Random Forest |
-| :--- | :---: | :---: | :---: | :---: |
-| **Accuracy (%)** | 70.78 | 70.13 | 74.03 | **77.92** |
-| **Precision (%)** | 69.89 | 70.99 | 73.37 | **77.45** |
-| **Recall (%)** | 70.78 | 70.13 | 74.03 | **77.92** |
-| **F1-score (%)** | 70.08 | 70.45 | 73.49 | **77.32** |
-| **ROC - AUC** | 0.8130 | 0.7646 | 0.7964 | **0.8192** |
-| **Thời gian dự đoán (ms)** | **0.55** | 1.41 | 5.61 | 18.53 |
-| **Nhận xét** | Tốc độ nhanh nhất, khả năng phân tách (ROC-AUC) tốt (0.8130). | Tốc độ rất nhanh, tuy nhiên các chỉ số đánh giá tổng quan thấp hơn các mô hình còn lại. | Cân bằng tốt giữa độ chính xác (74.03%) và thời gian xử lý (5.61 ms). | Hiệu suất tổng thể tối ưu nhất (Accuracy 77.92%, ROC-AUC cao nhất 0.8192). |
+| Metric                     |                      Logistic Regression                      |                                  Gaussian Naive Bayes                                   |                        Support Vector Machine                         |                               Random Forest                                |
+| :------------------------- | :-----------------------------------------------------------: | :-------------------------------------------------------------------------------------: | :-------------------------------------------------------------------: | :------------------------------------------------------------------------: |
+| **Accuracy (%)**           |                             70.78                             |                                          70.13                                          |                                 74.03                                 |                                 **77.92**                                  |
+| **Precision (%)**          |                             69.89                             |                                          70.99                                          |                                 73.37                                 |                                 **77.45**                                  |
+| **Recall (%)**             |                             70.78                             |                                          70.13                                          |                                 74.03                                 |                                 **77.92**                                  |
+| **F1-score (%)**           |                             70.08                             |                                          70.45                                          |                                 73.49                                 |                                 **77.32**                                  |
+| **ROC - AUC**              |                            0.8130                             |                                         0.7646                                          |                                0.7964                                 |                                 **0.8192**                                 |
+| **Thời gian dự đoán (ms)** |                           **0.55**                            |                                          1.41                                           |                                 5.61                                  |                                   18.53                                    |
+| **Nhận xét**               | Tốc độ nhanh nhất, khả năng phân tách (ROC-AUC) tốt (0.8130). | Tốc độ rất nhanh, tuy nhiên các chỉ số đánh giá tổng quan thấp hơn các mô hình còn lại. | Cân bằng tốt giữa độ chính xác (74.03%) và thời gian xử lý (5.61 ms). | Hiệu suất tổng thể tối ưu nhất (Accuracy 77.92%, ROC-AUC cao nhất 0.8192). |
+
 ---
 
 ## 5. Hợp Đồng API (API Endpoints)
@@ -93,7 +94,8 @@ Toàn bộ hệ thống gồm các container độc lập kết nối qua mạng
     "model_name": "random_forest"
   }
   ```
---- 
+
+---
 
 ## 6. Hướng Dẫn Vận Hành Hệ Thống (Step-by-Step)
 
@@ -101,14 +103,15 @@ Phần này chia thành 2 cách tiếp cận tùy thuộc vào đối tượng s
 
 ### 🟢 PHẦN A: Dành cho Người không biết gì về công nghệ (Chỉ xem và test giao diện nhanh)
 
-* **Step 1:** Tải và cài đặt phần mềm [Docker Desktop](https://www.docker.com/products/docker-desktop/?utm_source=gemini), mở phần mềm lên và đợi đến khi biểu tượng góc trái chuyển sang màu xanh lá (**Running**).
-* **Step 2:** Tải mã nguồn dự án về máy tính và giải nén thư mục (ví dụ thư mục `Diabetes`).
-* **Step 3:** Mở thư mục dự án, click chuột phải chọn mở cửa sổ lệnh (Terminal / PowerShell / Command Prompt).
-* **Step 4:** Chạy lệnh khởi động hệ thống:
+- **Step 1:** Tải và cài đặt phần mềm [Docker Desktop](https://www.docker.com/products/docker-desktop/?utm_source=gemini), mở phần mềm lên và đợi đến khi biểu tượng góc trái chuyển sang màu xanh lá (**Running**).
+- **Step 2:** Tải mã nguồn dự án về máy tính và giải nén thư mục (ví dụ thư mục `Diabetes`).
+- **Step 3:** Mở thư mục dự án, click chuột phải chọn mở cửa sổ lệnh (Terminal / PowerShell / Command Prompt).
+- **Step 4:** Chạy lệnh khởi động hệ thống:
+
 ```bash
 docker compose up -d
 
-````
+```
 
 - **Step 5:** Mở trình duyệt web và truy cập vào đường dẫn: **`http://localhost:8080`** để sử dụng giao diện trực quan. Khi dùng xong, tắt hệ thống bằng lệnh: `docker compose down`.
 
