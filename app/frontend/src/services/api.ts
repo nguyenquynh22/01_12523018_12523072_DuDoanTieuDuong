@@ -1,6 +1,6 @@
 import type { DiabetesInput, PredictionResponse } from "../types/diabetes";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export async function predictDiabetes(
   input: DiabetesInput,

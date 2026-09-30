@@ -165,7 +165,6 @@
     "test_sample_count": 154
   },
   "validation_method": "Stratified 80/20 split; thresholds selected using 5-fold out-of-fold training predictions; test split used only for final reporting.",
-  "metrics_threshold": 0.5,
   "test_sample_count": 154,
   "train_sample_count": 614,
   "target_sensitivity": 0.8

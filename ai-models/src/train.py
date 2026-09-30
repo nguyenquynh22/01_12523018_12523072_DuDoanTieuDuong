@@ -6,9 +6,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, recall_score
 from sklearn.model_selection import StratifiedKFold, cross_val_predict, train_test_split
@@ -16,6 +14,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from preprocess import build_preprocessor
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT_DIR / 'data'
@@ -27,7 +26,6 @@ MODEL_LABELS = {
     'naive_bayes': 'Naive Bayes',
     'random_forest': 'Random Forest',
 }
-ZERO_AS_MISSING = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
 
 
 def resolve_data_file():
@@ -46,10 +44,7 @@ def resolve_data_file():
 
 def build_pipeline(estimator):
     return Pipeline([
-        ('impute_invalid_zero', ColumnTransformer(
-            [('median', SimpleImputer(strategy='median', missing_values=0), ZERO_AS_MISSING)],
-            remainder='passthrough',
-        )),
+        ('impute_invalid_zero', build_preprocessor()),
         ('scaler', StandardScaler()),
         ('classifier', estimator),
     ])
@@ -156,6 +151,8 @@ def main():
         'validation_method': 'Stratified 80/20 split; thresholds selected using 5-fold out-of-fold training predictions; test split used only for final reporting.',
         'notes': 'The sensitivity target is an illustrative screening assumption, not clinically validated. External validation and clinical review are required before real-world use.',
     })
+    # Remove a legacy field that implied final metrics used a fixed 0.5 threshold.
+    metadata.pop('metrics_threshold', None)
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
     chosen = cv_results[selected_key]
     print(f"Recommended: {MODEL_LABELS[selected_key]} | threshold={chosen['threshold']:.4f} | CV sensitivity={chosen['positive_recall']:.3f} | CV specificity={chosen['specificity']:.3f}")

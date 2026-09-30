@@ -43,38 +43,30 @@ def normalize_model_name(model_name: str) -> str:
 
 def load_models():
     loaded_models = {}
-    scaler = None
 
     if not MODEL_BUNDLE_PATH.exists():
-        return scaler, loaded_models
+        return loaded_models
 
     try:
         bundle = joblib.load(MODEL_BUNDLE_PATH)
     except Exception as exc:
         print(f'Không thể load model bundle: {exc}')
-        return scaler, loaded_models
+        return loaded_models
 
     if isinstance(bundle, dict):
         for key in MODEL_KEYS:
             if key in bundle and bundle[key] is not None:
                 loaded_models[key] = bundle[key]
-        if loaded_models:
-            for model in loaded_models.values():
-                if hasattr(model, 'named_steps') and 'scaler' in model.named_steps:
-                    scaler = model.named_steps['scaler']
-                    break
-        return scaler, loaded_models
+        return loaded_models
 
-    if hasattr(bundle, 'named_steps'):
-        scaler = bundle.named_steps.get('scaler', scaler)
-        if 'random_forest' in MODEL_KEYS:
-            loaded_models['random_forest'] = bundle
+    if hasattr(bundle, 'named_steps') and 'random_forest' in MODEL_KEYS:
+        loaded_models['random_forest'] = bundle
 
-    return scaler, loaded_models
+    return loaded_models
 
 
 try:
-    scaler, models = load_models()
+    models = load_models()
     decision_config = load_decision_config()
     if models:
         print(f'Đã load {len(models)} model(s) từ {MODEL_DIR}')
@@ -82,7 +74,6 @@ try:
         print('Không tìm thấy model nào. Kiểm tra ai-models/models/.')
 except Exception as e:
     print(f'Lỗi load model: {e}')
-    scaler = None
     models = {}
 
 
@@ -125,7 +116,7 @@ def get_model_config():
 
 @app.post('/predict/{model_name}')
 def predict(model_name: str, data: PatientData):
-    if not models or scaler is None:
+    if not models:
         raise HTTPException(status_code=503, detail='Model chưa được huấn luyện hoặc file model bị thiếu.')
 
     model_key = normalize_model_name(model_name)
@@ -159,14 +150,7 @@ def predict(model_name: str, data: PatientData):
 
     model = models[model_key]
     try:
-        if hasattr(model, 'named_steps'):
-            probability = float(model.predict_proba(input_df)[0][1]) if hasattr(model, 'predict_proba') else 0.0
-        else:
-            if model_key in ['logistic', 'svm']:
-                input_processed = scaler.transform(input_df)
-            else:
-                input_processed = input_df
-            probability = float(model.predict_proba(input_processed)[0][1]) if hasattr(model, 'predict_proba') else 0.0
+        probability = float(model.predict_proba(input_df)[0][1])
     except Exception as exc:
         logger.exception('Prediction failed for model %s', model_key)
         raise HTTPException(status_code=500, detail=f'Prediction failed for model {model_key}') from exc

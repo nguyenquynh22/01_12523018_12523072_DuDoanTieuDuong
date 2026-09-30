@@ -14,9 +14,10 @@ The prediction endpoint requires a POST request with a JSON body. Use PowerShell
 
 ## Start locally
 
-Start Docker Desktop, open PowerShell in the project root, and run:
+Start Docker Desktop, copy `.env.example` to `.env`, and open PowerShell in the project root. Adjust `API_URL` for the URL the browser uses to reach the backend, `AI_SERVICE_URL` for the backend-to-AI address, and any host ports or mount paths you need. Compose reads `.env` automatically. Rebuild after changing `API_URL`, since it is injected while the frontend image is built.
 
 ```powershell
+Copy-Item .env.example .env
 docker compose up --build -d
 docker compose ps
 ```
@@ -77,9 +78,10 @@ Invoke-RestMethod -Method Post `
 `ai-models/colab/03_train.ipynb` and `ai-models/src/train.py` use the same pipeline:
 
 1. Split the stratified dataset into 80% train and 20% test (`random_state=42`).
-2. Compare Logistic Regression, SVM, Naive Bayes, and Random Forest with 5-fold stratified cross-validation on the training split. For each model, select a probability threshold from 5-fold out-of-fold train predictions that reaches the illustrative 80% sensitivity target and maximizes specificity. Recommend the model with highest CV specificity among those meeting the target; report weighted F1 and positive-class recall as supporting metrics.
-3. Fit each candidate model on the full 80% train split for inference. The held-out 20% test split is used only for final metrics.
-4. At inference, run all four fitted models in parallel, each with its threshold selected on train. The API returns four predictions and highlights the model recommended by cross-validation.
+2. In each model `Pipeline`, treat zero in Glucose, BloodPressure, SkinThickness, Insulin, and BMI as missing; fit median imputation and `StandardScaler` on each training fold. This prevents preprocessing leakage into validation and test data.
+3. Compare Logistic Regression, SVM, Naive Bayes, and Random Forest with 5-fold stratified cross-validation on the training split. For each model, select a probability threshold from out-of-fold train predictions that reaches the illustrative 80% sensitivity target and maximizes specificity. Recommend the model with highest CV specificity; use weighted F1 and positive-class recall as supporting metrics.
+4. Fit each candidate model on the full 80% train split for inference. The held-out 20% test split is used only for final metrics.
+5. At inference, run all four fitted pipelines, each with its threshold selected on train. The API returns four predictions and highlights the model recommended by cross-validation. `GridSearchCV` is not part of this workflow because model hyperparameters are fixed; it can be added if hyperparameter tuning is required by the course rubric.
 
 After training, place the matching `model.joblib` (containing all four fitted models) and `decision_config.json` in `ai-models/models/`, then restart the AI service.
 
@@ -251,7 +253,10 @@ app/backend/           FastAPI gateway, AI service client, and MongoDB history
 ai-models/service/     FastAPI inference service
 ai-models/models/      model.joblib and decision_config.json
 ai-models/src/train.py Local training script, aligned with Colab
+ai-models/colab/01_eda.ipynb Exploratory data analysis
+ai-models/colab/02_preprocess.ipynb Preprocessing review; fitting happens in the training pipeline
 ai-models/colab/03_train.ipynb Colab training notebook
+ai-models/colab/04_evaluate.ipynb Holdout evaluation for trained artifacts
 nginx/default.conf     Gateway routing for frontend/backend/AI
  docker-compose.yml    Local services
 ```

@@ -49,7 +49,9 @@ async def normalize_trailing_dots(request: Request, call_next):
 
 
 def resolve_ai_service_url():
-    url = os.getenv("AI_SERVICE_URL", "http://ai-service:8001").rstrip("/")
+    url = os.getenv("AI_SERVICE_URL", "").rstrip("/")
+    if not url:
+        raise RuntimeError("AI_SERVICE_URL must be configured in the environment")
     return url
 
 
@@ -158,7 +160,7 @@ def proxy_to_ai_service(data: PatientInput):
                 "probability": round(float(prediction_result["probability"]) * 100, 1),
                 "threshold": round(threshold * 100, 1),
                 "statusText": "Nguy cơ tiểu đường" if prediction == 1 else "Bình thường",
-                "description": "Dự đoán với ngưỡng cố định 0.5.",
+                "description": "Prediction threshold selected by cross-validation on the training split.",
                 "cvMetrics": metrics["cv_metrics"],
                 "testMetrics": metrics["test_metrics"],
             })
@@ -180,7 +182,9 @@ def proxy_to_ai_service(data: PatientInput):
             database["prediction_history"].insert_one({
                 "request_id": response_payload["id"], "created_at": now_utc,
                 "input_data": payload, "results": results,
-                "recommended_model": recommended_model, "threshold": 0.5,
+                "recommended_model": recommended_model,
+                "target_sensitivity": config["target_sensitivity"],
+                "model_thresholds": {result["modelName"]: result["threshold"] for result in results},
             })
         return response_payload
     except requests.exceptions.RequestException as exc:

@@ -1,22 +1,17 @@
-import numpy as np
-import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+
+ZERO_AS_MISSING = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
 
 
-def clean_and_preprocess(df):
+def build_preprocessor():
+    """Build the train-fold-fitted imputer used by the model pipelines.
+
+    Zero values in the listed medical measurements are treated as missing.
+    SimpleImputer learns medians only when the surrounding Pipeline is fit,
+    which keeps cross-validation folds and the held-out test set isolated.
     """
-    Làm sạch dữ liệu: thay các giá trị 0 không hợp lệ bằng NaN ở các cột y tế
-    và điền bằng median để giảm ảnh hưởng outlier.
-    """
-    df = df.copy()
-    cols_to_fix = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
-
-    for col in cols_to_fix:
-        if col not in df.columns:
-            continue
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-        df[col] = df[col].replace(0, np.nan)
-        median_value = df[col].median()
-        if pd.notna(median_value):
-            df[col] = df[col].fillna(median_value)
-
-    return df
+    return ColumnTransformer(
+        [('median', SimpleImputer(strategy='median', missing_values=0), ZERO_AS_MISSING)],
+        remainder='passthrough',
+    )
