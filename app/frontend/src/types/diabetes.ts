@@ -1,5 +1,3 @@
-// src/types/diabetes.ts
-
 export interface DiabetesInput {
   pregnancies: number;
   glucose: number;
@@ -12,17 +10,33 @@ export interface DiabetesInput {
 }
 
 export interface ModelPredictionResult {
-  modelName: string;         // Tên model: "Logistic Regression", "SVM", "Naive Bayes", "Random Forest"
-  prediction: number;        // 0: Bình thường, 1: Nguy cơ tiểu đường
-  probability: number;       // Xác suất % (Ví dụ: 85.5)
-  statusText: string;        // "Nguy cơ cao" hoặc "An toàn"
-  description: string;       // Mô tả ngắn về đặc trưng của model đó
+  threshold: number;
+  modelName: string;
+  prediction: number;
+  probability: number;
+  statusText: string;
+  description: string;
+  cvMetrics: ModelMetrics;
+  testMetrics: ModelMetrics;
+}
+
+export interface ModelMetrics {
+  accuracy: number;
+  weighted_precision: number;
+  weighted_recall: number;
+  weighted_f1_score: number;
+  positive_recall: number;
+  specificity: number;
+  predicted_positive_count: number;
 }
 
 export interface PredictionResponse {
   id: string;
   createdAt: string;
   inputData: DiabetesInput;
-  results: ModelPredictionResult[]; // Mảng chứa kết quả của cả 4 model
-  bestModel: string;                 // Tên model tốt nhất (VD: "Random Forest")
+  results: ModelPredictionResult[];
+  recommendedModel: string;
+  targetSensitivity: number;
+  cvSampleCount: number;
+  testSampleCount: number;
 }

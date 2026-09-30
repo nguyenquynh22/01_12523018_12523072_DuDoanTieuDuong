@@ -1,74 +1,44 @@
-// src/components/ResultComparison.tsx
-import React from 'react';
-import type { PredictionResponse } from '../types/diabetes';
-import { Award, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React from "react";
+import type { PredictionResponse } from "../types/diabetes";
+import { CheckCircle2, AlertTriangle, Award } from "lucide-react";
 
-interface ResultComparisonProps {
-  data: PredictionResponse;
-}
+interface ResultComparisonProps { data: PredictionResponse }
 
-export const ResultComparison: React.FC<ResultComparisonProps> = ({ data }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 mt-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 flex items-center">
-            <span className="w-2 h-6 bg-[#009485] rounded-full mr-2"></span>
-            Kết quả so sánh đồng thời 4 mô hình
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">Mã phiên: {data.id} | Thời gian: {data.createdAt}</p>
-        </div>
-        <div className="bg-teal-50 border border-[#009485] text-[#009485] px-4 py-2 rounded-lg text-sm font-semibold flex items-center">
-          <Award className="w-4 h-4 mr-1.5 text-[#009485]" />
-          Khuyên dùng: {data.bestModel}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {data.results.map((res, index) => {
-          const isRisky = res.prediction === 1;
-          const isBest = res.modelName === data.bestModel;
-
-          return (
-            <div 
-              key={index} 
-              className={`border rounded-xl p-5 flex flex-col justify-between transition-all ${
-                isBest ? 'border-[#009485] bg-teal-50/30 ring-2 ring-[#009485]/20' : 'border-gray-200 bg-white'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Model {index + 1}</span>
-                  {isBest && <span className="bg-[#009485] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">Best</span>}
-                </div>
-                <h3 className="font-bold text-gray-900 text-base mb-2">{res.modelName}</h3>
-                
-                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mb-3 ${
-                  isRisky ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                }`}>
-                  {isRisky ? <AlertTriangle className="w-3.5 h-3.5 mr-1" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                  {res.statusText}
-                </div>
-
-                <p className="text-xs text-gray-600 mb-4">{res.description}</p>
-              </div>
-
-              <div className="border-t border-gray-100 pt-3 mt-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">Độ tin cậy:</span>
-                  <span className="font-bold text-gray-900">{res.probability}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-1.5 overflow-hidden">
-                  <div 
-                    className={`h-2 rounded-full ${isRisky ? 'bg-amber-500' : 'bg-[#009485]'}`}
-                    style={{ width: `${res.probability}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+export const ResultComparison: React.FC<ResultComparisonProps> = ({ data }) => (
+  <section className="mt-6 rounded-xl border border-gray-100 bg-white p-6 shadow-md">
+    <div className="mb-5">
+      <h2 className="flex items-center text-xl font-bold text-gray-800">
+        <span className="mr-2 h-6 w-2 rounded-full bg-[#009485]" />So sánh kết quả 4 mô hình
+      </h2>
+      <p className="mt-1 text-sm text-gray-500">{data.createdAt} | Mục tiêu Recall lớp dương: {(data.targetSensitivity * 100).toFixed(0)}% | Model khuyên dùng: {data.recommendedModel}</p>
+      <p className="mt-1 text-xs text-slate-500">Ngưỡng từng model được chọn trên CV để đạt Recall mục tiêu, sau đó ưu tiên Specificity cao nhất. Mục tiêu này là giả định mô phỏng, chưa được xác nhận lâm sàng.</p>
     </div>
-  );
-};
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {data.results.map((result) => {
+        const isRecommended = result.modelName === data.recommendedModel;
+        const isRisky = result.prediction === 1;
+        return (
+          <article key={result.modelName} className={`rounded-xl border p-5 ${isRecommended ? "border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/20" : "border-slate-200 bg-white"}`}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="font-bold text-slate-900">{result.modelName}</h3>
+              {isRecommended && <span className="inline-flex items-center rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white"><Award className="mr-1 h-3.5 w-3.5" />Khuyên dùng</span>}
+            </div>
+            <div className={`mb-3 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${isRisky ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
+              {isRisky ? <AlertTriangle className="mr-1 h-3.5 w-3.5" /> : <CheckCircle2 className="mr-1 h-3.5 w-3.5" />}{result.statusText}
+            </div>
+            <p className="text-sm text-slate-700">Xác suất lớp nguy cơ: <strong>{result.probability}%</strong> | Ngưỡng: {result.threshold}%</p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-2 rounded-full ${isRisky ? "bg-red-500" : "bg-emerald-600"}`} style={{ width: `${result.probability}%` }} /></div>
+            <div className="mt-4 border-t border-slate-200 pt-3 text-xs text-slate-600">
+              <p className="font-semibold text-slate-800">5-fold CV trên train ({data.cvSampleCount} mẫu)</p>
+              <p className="mt-1">Threshold {result.threshold}% | Accuracy {(result.cvMetrics.accuracy * 100).toFixed(1)}% | Weighted F1 {(result.cvMetrics.weighted_f1_score * 100).toFixed(1)}%</p>
+              <p className="mt-1 font-medium text-amber-800">Positive recall: {(result.cvMetrics.positive_recall * 100).toFixed(1)}% | Specificity: {(result.cvMetrics.specificity * 100).toFixed(1)}%</p>
+              <p className="mt-2 font-semibold text-slate-800">Test độc lập ({data.testSampleCount} mẫu)</p>
+              <p className="mt-1">Accuracy {(result.testMetrics.accuracy * 100).toFixed(1)}% | Weighted F1 {(result.testMetrics.weighted_f1_score * 100).toFixed(1)}%</p>
+              <p className="mt-1 font-medium text-amber-800">Positive recall: {(result.testMetrics.positive_recall * 100).toFixed(1)}% | Specificity: {(result.testMetrics.specificity * 100).toFixed(1)}%</p>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+);

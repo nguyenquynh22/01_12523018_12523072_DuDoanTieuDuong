@@ -1,4 +1,3 @@
-// src/App.tsx
 import { useState } from "react";
 import { PredictionForm } from "./components/PredictionForm";
 import { ResultComparison } from "./components/ResultComparison";
@@ -6,7 +5,7 @@ import { predictDiabetes } from "./services/api";
 import type { DiabetesInput, PredictionResponse } from "./types/diabetes";
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [latestResult, setLatestResult] = useState<PredictionResponse | null>(
     null,
   );
@@ -14,8 +13,7 @@ export default function App() {
   const handlePredict = async (inputData: DiabetesInput) => {
     setIsLoading(true);
     try {
-      const response = await predictDiabetes(inputData);
-      setLatestResult(response);
+      setLatestResult(await predictDiabetes(inputData));
     } catch (error) {
       console.error("Lỗi khi gọi API dự đoán:", error);
     } finally {
@@ -29,23 +27,20 @@ export default function App() {
         <header className="page-header">
           <div className="eyebrow">AI HEALTH CHECK</div>
           <h1>Dự đoán nguy cơ tiểu đường</h1>
-          <p>
-            Chỉ cần nhập các chỉ số y tế, hệ thống sẽ chạy đồng thời 4 mô hình
-            AI và đưa ra kết quả tốt nhất.
-          </p>
         </header>
-
         <section className="panel-grid">
           <PredictionForm onSubmit={handlePredict} isLoading={isLoading} />
-
           {latestResult ? (
             <ResultComparison data={latestResult} />
           ) : (
             <div className="empty-state">
               <p>
-                Hãy nhập dữ liệu và nhấn <strong>Chạy Dự Đoán</strong>
+                Nhập dữ liệu và nhấn <strong>Dự đoán</strong>
               </p>
-              <span>Kết quả so sánh 4 mô hình sẽ xuất hiện ở đây.</span>
+              <span>
+                Kết quả của cả bốn mô hình sẽ hiện ở đây, mô hình được khuyên
+                dùng sẽ được làm nổi bật.
+              </span>
             </div>
           )}
         </section>

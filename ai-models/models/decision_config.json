@@ -1,0 +1,105 @@
+{
+  "model_key": "svm",
+  "model_name": "Support Vector Machine (SVM)",
+  "target_sensitivity": 0.8,
+  "selection_metric": "highest_specificity_subject_to_target_sensitivity",
+  "selection_method": "Per-model threshold selected from 5-fold out-of-fold predictions on 80% train to attain at least the configured positive-class recall; recommend highest CV specificity.",
+  "model_keys": [
+    "logistic",
+    "svm",
+    "naive_bayes",
+    "random_forest"
+  ],
+  "models": {
+    "logistic": {
+      "threshold": 0.280588297754102,
+      "cv_metrics": {
+        "threshold": 0.280588297754102,
+        "accuracy": 0.7296416938110749,
+        "weighted_precision": 0.767949776338935,
+        "weighted_recall": 0.7296416938110749,
+        "weighted_f1_score": 0.7359380934920492,
+        "positive_recall": 0.8037383177570093,
+        "specificity": 0.69,
+        "predicted_positive_count": 296
+      },
+      "test_metrics": {
+        "accuracy": 0.7272727272727273,
+        "weighted_precision": 0.7747515642252483,
+        "weighted_recall": 0.7272727272727273,
+        "weighted_f1_score": 0.7334710743801652,
+        "positive_recall": 0.8333333333333334,
+        "specificity": 0.67,
+        "predicted_positive_count": 78
+      }
+    },
+    "svm": {
+      "threshold": 0.25872317618043317,
+      "cv_metrics": {
+        "threshold": 0.25872317618043317,
+        "accuracy": 0.737785016286645,
+        "weighted_precision": 0.7727615449636194,
+        "weighted_recall": 0.737785016286645,
+        "weighted_f1_score": 0.7438126250080237,
+        "positive_recall": 0.8037383177570093,
+        "specificity": 0.7025,
+        "predicted_positive_count": 291
+      },
+      "test_metrics": {
+        "accuracy": 0.6883116883116883,
+        "weighted_precision": 0.7302916381863751,
+        "weighted_recall": 0.6883116883116883,
+        "weighted_f1_score": 0.6954236774461493,
+        "positive_recall": 0.7592592592592593,
+        "specificity": 0.65,
+        "predicted_positive_count": 76
+      }
+    },
+    "naive_bayes": {
+      "threshold": 0.1770655664061519,
+      "cv_metrics": {
+        "threshold": 0.1770655664061519,
+        "accuracy": 0.7166123778501629,
+        "weighted_precision": 0.76039967260802,
+        "weighted_recall": 0.7166123778501629,
+        "weighted_f1_score": 0.7232698063546346,
+        "positive_recall": 0.8037383177570093,
+        "specificity": 0.67,
+        "predicted_positive_count": 304
+      },
+      "test_metrics": {
+        "accuracy": 0.6818181818181818,
+        "weighted_precision": 0.7318757192174913,
+        "weighted_recall": 0.6818181818181818,
+        "weighted_f1_score": 0.6889952153110048,
+        "positive_recall": 0.7777777777777778,
+        "specificity": 0.63,
+        "predicted_positive_count": 79
+      }
+    },
+    "random_forest": {
+      "threshold": 0.32,
+      "cv_metrics": {
+        "threshold": 0.32,
+        "accuracy": 0.7345276872964169,
+        "weighted_precision": 0.7708275647894278,
+        "weighted_recall": 0.7345276872964169,
+        "weighted_f1_score": 0.7406665352674943,
+        "positive_recall": 0.8037383177570093,
+        "specificity": 0.6975,
+        "predicted_positive_count": 293
+      },
+      "test_metrics": {
+        "accuracy": 0.7142857142857143,
+        "weighted_precision": 0.7561692693271641,
+        "weighted_recall": 0.7142857142857143,
+        "weighted_f1_score": 0.7208050376589703,
+        "positive_recall": 0.7962962962962963,
+        "specificity": 0.67,
+        "predicted_positive_count": 76
+      }
+    }
+  },
+  "cv_sample_count": 614,
+  "test_sample_count": 154
+}

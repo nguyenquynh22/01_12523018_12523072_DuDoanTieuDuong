@@ -15,7 +15,7 @@ export const Navbar: React.FC = () => {
               Diabetes AI Predictor
             </h1>
             <p className="text-xs text-gray-500">
-              Hệ thống phân loại bệnh tiểu đường (4 Models)
+              Hệ thống phân loại bệnh tiểu đường
             </p>
           </div>
         </div>
