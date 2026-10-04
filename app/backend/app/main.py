@@ -128,6 +128,9 @@ def health_check():
 @app.post("/api/v1/predict-disease")
 def proxy_to_ai_service(data: PatientInput):
     payload = data.model_dump()
+    now_utc = datetime.now(timezone.utc)
+    request_id = f"pred-{now_utc.strftime('%Y%m%d%H%M%S')}"
+    print(f"[{request_id}] [BACKEND] Nhận yêu cầu dự đoán mới từ Client -> Bắt đầu gọi AI Service", flush=True)
     try:
         config_response = requests.get(f"{AI_SERVICE_URL}/model-config", timeout=10)
         if config_response.status_code != 200:
@@ -140,7 +143,10 @@ def proxy_to_ai_service(data: PatientInput):
         with ThreadPoolExecutor(max_workers=4) as executor:
             responses = list(executor.map(
                 lambda model_key: requests.post(
-                    f"{AI_SERVICE_URL}/predict/{model_key}", json=payload, timeout=20
+                    f"{AI_SERVICE_URL}/predict/{model_key}",
+                    json=payload,
+                    headers={"X-Request-ID": request_id},
+                    timeout=20,
                 ),
                 model_keys,
             ))
@@ -166,9 +172,9 @@ def proxy_to_ai_service(data: PatientInput):
             })
 
         recommended_model = config["model_name"]
-        now_utc = datetime.now(timezone.utc)
         response_payload = {
-            "id": f"pred-{now_utc.strftime('%Y%m%d%H%M%S')}",
+            "id": request_id,
+            "request_id": request_id,
             "createdAt": now_utc.strftime("%d/%m/%Y %H:%M:%S"),
             "inputData": payload,
             "results": results,
@@ -180,16 +186,21 @@ def proxy_to_ai_service(data: PatientInput):
         if mongo_client is not None:
             database = mongo_client[MONGODB_DATABASE]
             database["prediction_history"].insert_one({
-                "request_id": response_payload["id"], "created_at": now_utc,
+                "request_id": request_id, "created_at": now_utc,
                 "input_data": payload, "results": results,
                 "recommended_model": recommended_model,
                 "target_sensitivity": config["target_sensitivity"],
                 "model_thresholds": {result["modelName"]: result["threshold"] for result in results},
             })
+            print(f"[{request_id}] [BACKEND] Dự đoán thành công cho 4 model -> Khuyên dùng: {recommended_model} -> Đã lưu MongoDB Atlas (200 OK)", flush=True)
+        else:
+            print(f"[{request_id}] [BACKEND] Dự đoán thành công cho 4 model -> Khuyên dùng: {recommended_model} (200 OK)", flush=True)
         return response_payload
     except requests.exceptions.RequestException as exc:
+        print(f"[{request_id}] [BACKEND ERROR] Không thể kết nối AI Service: {exc}", flush=True)
         raise HTTPException(status_code=503, detail=f"Cannot connect to AI service at {AI_SERVICE_URL}: {exc}")
     except HTTPException:
         raise
     except Exception as exc:
+        print(f"[{request_id}] [BACKEND ERROR] Lỗi xử lý: {exc}", flush=True)
         raise HTTPException(status_code=500, detail=f"Prediction processing failed: {exc}")
