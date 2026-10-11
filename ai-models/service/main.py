@@ -6,7 +6,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 app = FastAPI(title='AI Service - Diabetes Prediction', version='1.0')
 
@@ -78,6 +78,8 @@ except Exception as e:
 
 
 class PatientData(BaseModel):
+    model_config = ConfigDict(extra='ignore')
+
     Pregnancies: float = Field(default=0.0, validation_alias=AliasChoices('pregnancies', 'Pregnancies'))
     Glucose: float = Field(default=0.0, validation_alias=AliasChoices('glucose', 'Glucose'))
     BloodPressure: float = Field(default=0.0, validation_alias=AliasChoices('bloodPressure', 'BloodPressure'))
@@ -92,6 +94,11 @@ class PatientData(BaseModel):
     def coerce_float(cls, value):
         if value is None:
             return 0.0
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped == '':
+                return 0.0
+            return float(stripped)
         return float(value)
 
 

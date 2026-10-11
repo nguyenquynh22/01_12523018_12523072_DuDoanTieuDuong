@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from pymongo import MongoClient
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
 try:
@@ -98,14 +98,28 @@ def shutdown_mongo_client():
 
 
 class PatientInput(BaseModel):
-    pregnancies: float
-    glucose: float
-    bloodPressure: float
-    skinThickness: float
-    insulin: float
-    bmi: float
-    diabetesPedigreeFunction: float
-    age: float
+    model_config = ConfigDict(extra='ignore')
+
+    pregnancies: float = 0.0
+    glucose: float = 0.0
+    bloodPressure: float = 0.0
+    skinThickness: float = 0.0
+    insulin: float = 0.0
+    bmi: float = 0.0
+    diabetesPedigreeFunction: float = 0.0
+    age: float = 0.0
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def coerce_float(cls, value):
+        if value is None:
+            return 0.0
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped == '':
+                return 0.0
+            return float(stripped)
+        return float(value)
 
 
 @app.get("/health")

@@ -9,12 +9,19 @@ export default function App() {
   const [latestResult, setLatestResult] = useState<PredictionResponse | null>(
     null,
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handlePredict = async (inputData: DiabetesInput) => {
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       setLatestResult(await predictDiabetes(inputData));
     } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không thể kết nối tới backend để dự đoán.";
+      setErrorMessage(message);
       console.error("Lỗi khi gọi API dự đoán:", error);
     } finally {
       setIsLoading(false);
@@ -30,7 +37,12 @@ export default function App() {
         </header>
         <section className="panel-grid">
           <PredictionForm onSubmit={handlePredict} isLoading={isLoading} />
-          {latestResult ? (
+          {errorMessage ? (
+            <div className="empty-state border border-red-200 bg-red-50 text-red-700">
+              <p className="font-semibold">Lỗi kết nối API</p>
+              <span>{errorMessage}</span>
+            </div>
+          ) : latestResult ? (
             <ResultComparison data={latestResult} />
           ) : (
             <div className="empty-state">

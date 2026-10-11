@@ -44,6 +44,20 @@ Hệ thống ứng dụng học máy hỗ trợ sàng lọc nguy cơ mắc bện
 7. `DiabetesPedigreeFunction`: Chỉ số phả hệ di truyền tiểu đường (từ 0.078 đến 2.42).
 8. `Age`: Tuổi của bệnh nhân (từ 21 đến 81 tuổi).
 
+### Tóm tắt khám phá dữ liệu
+
+Bộ dữ liệu có 768 mẫu: `Outcome = 0` gồm 500 mẫu (65,1%) và `Outcome = 1` gồm 268 mẫu (34,9%). Năm cột có giá trị 0 được xem là thiếu ngầm có số lượng như sau:
+
+| Đặc trưng | Số giá trị 0 |
+| :--- | ---: |
+| `Glucose` | 5 |
+| `BloodPressure` | 35 |
+| `SkinThickness` | 227 |
+| `Insulin` | 374 |
+| `BMI` | 11 |
+
+Trên dữ liệu gốc, tương quan Pearson với `Outcome` cao nhất ở `Glucose` (0,47), tiếp theo là `BMI` (0,29), `Age` (0,24) và `Pregnancies` (0,22); `Age` và `Pregnancies` có tương quan 0,54. Đây là tương quan mô tả, không chứng minh quan hệ nhân quả. Heatmap trong notebook EDA tính trên bản sao đã thay zero bằng median nên hệ số có thể khác các con số trên.
+
 > **Lưu ý tiền xử lý:** Trong 8 đặc trưng trên, có 5 đặc trưng không thể bằng 0 về mặt y sinh học (`Glucose`, `BloodPressure`, `SkinThickness`, `Insulin`, `BMI`). Hệ thống nhận diện các giá trị 0 này là giá trị thiếu (missing) và tự động điền khuyết bằng **Trung vị (Median)** ngay trong `Pipeline` của từng Fold huấn luyện để chống rò rỉ dữ liệu (Data Leakage).
 
 ---
@@ -65,7 +79,22 @@ Hệ thống ứng dụng học máy hỗ trợ sàng lọc nguy cơ mắc bện
 | **Gaussian Naive Bayes** | 17.7% | 80.4% | 67.0% | 72.3% | 77.8% | 68.2% | Tốc độ cực nhanh nhưng giả định độc lập làm Specificity thấp hơn (nhiều báo động giả). |
 | **Random Forest** | 32.0% | 80.4% | 69.8% | 74.1% | 79.6% | 71.4% | Bắt quan hệ phi tuyến tốt, Specificity CV chỉ kém SVM 0.5%. |
 
+### 4.3. Ma trận nhầm lẫn trên tập Test
+
+Tập Test có 54 mẫu dương tính và 100 mẫu âm tính. Số lượng dự đoán đúng/sai tại ngưỡng đã chọn:
+
+| Mô hình | TP | FN | TN | FP |
+| :--- | ---: | ---: | ---: | ---: |
+| Logistic Regression | 45 | 9 | 67 | 33 |
+| SVM | 41 | 13 | 65 | 35 |
+| Gaussian Naive Bayes | 42 | 12 | 63 | 37 |
+| Random Forest | 43 | 11 | 67 | 33 |
+
+Các ngưỡng được chọn để đạt Recall lớp dương mục tiêu trên CV làm tăng số cảnh báo dương tính giả. SVM được khuyên dùng theo tiêu chí đã đặt trước trên CV; riêng tập Test này, Logistic Regression có Accuracy (72,7%) và Recall lớp dương (83,3%) cao hơn SVM (68,8% và 75,9%). Kết quả từ một lần chia dữ liệu không đủ để khẳng định mô hình tốt nhất cho triển khai thực tế.
+
 > **Kết luận:** Hệ thống chọn **SVM** làm mô hình khuyên dùng, đồng thời khi người dùng gửi yêu cầu, hệ thống sẽ **chạy song song và trả về kết quả của cả 4 mô hình** để người dùng có góc nhìn đối chứng toàn diện.
+
+> **Giới hạn sử dụng:** Mục tiêu Recall 80% là giả định minh họa cho bài toán sàng lọc, chưa được xác nhận lâm sàng. Kết quả không thay thế chẩn đoán y tế; cần kiểm định ngoài mẫu và đánh giá chuyên môn trước khi sử dụng thực tế.
 
 ---
 
@@ -208,7 +237,7 @@ Hệ thống quản lý biến môi trường tập trung thông qua file `.env`
 
 | Tên biến | Ý nghĩa / Mô tả | Giá trị mặc định |
 | :--- | :--- | :--- |
-| `API_URL` | Địa chỉ gọi từ Frontend sang Backend Gateway | `http://localhost:8000` (hoặc link ngrok) |
+| API từ Frontend | Frontend gọi `/api/...` cùng origin qua Nginx Gateway; không cần cấu hình `API_URL` trong Docker. | Tự động |
 | `AI_SERVICE_URL` | Địa chỉ nội bộ Backend gọi sang AI Service | `http://ai-service:8001` (Docker) / `http://127.0.0.1:8001` (Local) |
 | `MONGODB_URI` | Chuỗi kết nối MongoDB Atlas lưu lịch sử dự đoán | Chuỗi kết nối `mongodb+srv://...` |
 | `MONGODB_DATABASE` | Tên Database lưu trữ trong MongoDB | `diabetes_db` |
@@ -224,25 +253,25 @@ Hệ thống quản lý biến môi trường tập trung thông qua file `.env`
 Để giảng viên và người ngoài có thể truy cập trải nghiệm sản phẩm trực tiếp qua Internet:
 
 1. Đảm bảo toàn bộ hệ thống Docker đang chạy (`docker compose ps`).
-2. Mở một cửa sổ PowerShell mới và kích hoạt tunnel qua cổng Nginx Gateway (8080):
+2. Mở một cửa sổ terminal mới và kích hoạt tunnel qua cổng Nginx Gateway (8080):
    ```powershell
-   & "$PWD/ngrok.exe" http --domain=unaltered-eagle-wackiness.ngrok-free.dev 8080
+  ngrok http 8080
    ```
-   *(Nếu không dùng domain cố định, chạy lệnh `& "$PWD/ngrok.exe" http 8080` và lấy URL Forwarding ngrok sinh ra).*
+  Mở URL HTTPS ở dòng `Forwarding` do ngrok in ra. URL ngẫu nhiên có thể đổi mỗi lần khởi động; chỉ dùng `--domain=...` nếu tài khoản đã cấu hình domain cố định.
 
 ---
 
-## 11. Địa chỉ Demo Online (Dành cho Giảng viên kiểm tra)
+## 11. Kiểm tra Demo Online
 
-* **Giao diện người dùng (Frontend):**  
-  👉 [https://unaltered-eagle-wackiness.ngrok-free.dev/](https://unaltered-eagle-wackiness.ngrok-free.dev/)
-* **Kiểm tra trạng thái Backend (Health Check):**  
-  👉 [https://unaltered-eagle-wackiness.ngrok-free.dev/health](https://unaltered-eagle-wackiness.ngrok-free.dev/health)
-* **Endpoint API dự đoán (POST):**  
-  👉 `https://unaltered-eagle-wackiness.ngrok-free.dev/api/v1/predict-disease`
+Dùng host HTTPS hiện tại ở dòng `Forwarding` của ngrok; không dùng lại URL ngẫu nhiên từ phiên trước.
+
+* **Giao diện người dùng (Frontend):** `https://<ngrok-host>/`
+* **Kiểm tra trạng thái Backend (Health Check):** `https://<ngrok-host>/health`
+* **Endpoint API dự đoán (POST):** `https://<ngrok-host>/api/v1/predict-disease`
 
 ### Ví dụ gọi API kiểm tra bằng PowerShell:
 ```powershell
+$ngrokHost = "https://<ngrok-host>" # Thay bằng host HTTPS ở dòng Forwarding
 $body = @{
   pregnancies = 2
   glucose = 120
@@ -255,16 +284,16 @@ $body = @{
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post `
-  -Uri "https://unaltered-eagle-wackiness.ngrok-free.dev/api/v1/predict-disease" `
+  -Uri "$ngrokHost/api/v1/predict-disease" `
   -ContentType "application/json" `
   -Body $body | ConvertTo-Json -Depth 5
 ```
 
 ---
 
-## 12. Nhật ký đổi cổng / tunnel
+## 12. Nhật ký cấu hình tunnel (lịch sử)
 
-| Thời điểm ghi nhận | Địa chỉ cũ | Địa chỉ mới (Active) | Trạng thái / Người thực hiện |
+| Thời điểm ghi nhận | Địa chỉ cũ | Domain được cấu hình | Trạng thái / Người thực hiện |
 | :---: | :--- | :--- | :--- |
 | **28/09/2026 08:30** | `http://localhost:8080` | `https://unaltered-eagle-wackiness.ngrok-free.dev` | Khởi tạo tunnel cố định phục vụ nộp bài |
 | **30/09/2026 15:00** | `ngrok-free.app (random)` | `https://unaltered-eagle-wackiness.ngrok-free.dev` | Cố định domain tunnel, đồng bộ với Nginx |
